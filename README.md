@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://skidding.dev/content/cdn/RJXNtelWtEcr.png" alt="Pocketfish Logo" width="100"/>
+  <img src="https://github.com/user-attachments/assets/5c659fdd-0fc4-43e1-bd7c-26a5bde15321" alt="Pocketfish Logo" width="200"/>
 
   # Pocketfish
 
