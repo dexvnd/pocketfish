@@ -44,6 +44,7 @@ class AssistantWorker(QtCore.QObject):
             threads=threads, hash_mb=hash_mb, skill=skill,
         )
         self._pending_opts = None
+        self._pending_suggestions = None
         self._last_score = None
         self._last_pv: List[str] = []
 
@@ -62,9 +63,7 @@ class AssistantWorker(QtCore.QObject):
         self.show_debug = on
 
     def set_suggestions(self, on):
-        self.suggestions_on = on
-        if not on:
-            self.moveCleared.emit()
+        self._pending_suggestions = on
 
     def set_engine_opts(self, d, mt, t, h, s):
         self._pending_opts = (d, mt, t, h, s)
@@ -120,7 +119,17 @@ class AssistantWorker(QtCore.QObject):
             if self._pending_opts:
                 self.engine.set_options(*self._pending_opts)
                 self._pending_opts = None
+                last_suggest_fen = None
                 self.statusChanged.emit("Engine settings updated.", "good")
+
+            if self._pending_suggestions is not None:
+                self.suggestions_on = self._pending_suggestions
+                self._pending_suggestions = None
+                if not self.suggestions_on:
+                    self.moveCleared.emit()
+                    self.suggestionText.emit("—")
+                else:
+                    last_suggest_fen = None
 
             if self.reset_requested:
                 chess_board = chess.Board()

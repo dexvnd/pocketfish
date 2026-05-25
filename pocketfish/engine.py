@@ -1,5 +1,6 @@
 import os
 import sys
+import random
 import shutil
 from typing import List, Optional, Tuple
 from dexvstuff import Logger
@@ -76,6 +77,7 @@ class EngineWorker:
 
         self.depth = depth
         self.movetime_ms = movetime_ms
+        self.skill = skill
         self._configure(threads, hash_mb, skill)
 
     def _configure(self, threads: int, hash_mb: int, skill: int) -> None:
@@ -91,16 +93,73 @@ class EngineWorker:
     def set_options(self, depth: int, movetime_ms: int, threads: int, hash_mb: int, skill: int) -> None:
         self.depth = depth
         self.movetime_ms = movetime_ms
+        self.skill = skill
         self._configure(threads, hash_mb, skill)
 
     def analyse(self, board: chess.Board) -> Tuple[Optional[chess.Move], Optional[chess.engine.PovScore], List[chess.Move]]:
         try:
-            limit = chess.engine.Limit(depth=self.depth,
-                                       time=self.movetime_ms / 1000.0)
-            info = self.engine.analyse(board, limit)
-            pv = info.get("pv", [])
-            move = pv[0] if pv else None
-            return move, info.get("score"), pv
+            limit = chess.engine.Limit(depth=self.depth, time=self.movetime_ms / 1000.0)
+
+            if self.skill <= 5:
+                multipv = min(5, board.legal_moves.count())
+            elif self.skill <= 12:
+                multipv = min(3, board.legal_moves.count())
+            else:
+                multipv = 1
+
+            if multipv <= 1:
+                info = self.engine.analyse(board, limit)
+                pv = info.get("pv", [])
+                move = pv[0] if pv else None
+                return move, info.get("score"), pv
+
+            infos = self.engine.analyse(board, limit, multipv=multipv)
+            if not infos:
+                return None, None, []
+
+            candidates: List[Tuple[chess.Move, int]] = []
+            for info in infos:
+                pv = info.get("pv", [])
+                if not pv:
+                    continue
+                sc = info.get("score")
+                if sc is None:
+                    continue
+                cp = sc.white().score(mate_score=10000) if not sc.white().is_mate() else (
+                    10000 if sc.white().mate() > 0 else -10000)
+                candidates.append((pv[0], cp))
+
+            if not candidates:
+                return None, None, []
+
+            best_move, best_cp = candidates[0]
+            best_pv = infos[0].get("pv", [])
+            best_score = infos[0].get("score")
+
+            if len(candidates) == 1:
+                return best_move, best_score, best_pv
+
+            temperature = max(1, (13 - self.skill) * 30)
+
+            weights = []
+            for move, cp in candidates:
+                loss = best_cp - cp
+                w = max(0.01, 1.0 - loss / temperature)
+                weights.append(w)
+
+            total = sum(weights)
+            r = random.random() * total
+            chosen_idx = 0
+            acc = 0.0
+            for i, w in enumerate(weights):
+                acc += w
+                if r <= acc:
+                    chosen_idx = i
+                    break
+
+            chosen_move = candidates[chosen_idx][0]
+            return chosen_move, best_score, best_pv
+
         except Exception as e:
             log.failure(e)
             return None, None, []

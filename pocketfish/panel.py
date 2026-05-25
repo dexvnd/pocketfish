@@ -13,6 +13,8 @@ class ControlPanel(QtWidgets.QWidget):
     debugToggled = QtCore.pyqtSignal(bool)
     suggestionToggled = QtCore.pyqtSignal(bool)
     engineOptsChanged = QtCore.pyqtSignal(int, int, int, int, int)
+    newGameRequested = QtCore.pyqtSignal()
+    resetBoardRequested = QtCore.pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -55,15 +57,6 @@ class ControlPanel(QtWidgets.QWidget):
         lay.setContentsMargins(2, 8, 2, 2)
 
         top_row = QtWidgets.QHBoxLayout()
-        side_lbl = QtWidgets.QLabel("Side:")
-        side_lbl.setProperty("role", "muted")
-        self.color_combo = QtWidgets.QComboBox()
-        self.color_combo.addItems(["White", "Black"])
-        self.color_combo.currentTextChanged.connect(self.colorChanged.emit)
-        self.color_combo.setFixedWidth(80)
-        top_row.addWidget(side_lbl)
-        top_row.addWidget(self.color_combo)
-        top_row.addSpacing(8)
         self.suggest_btn = QtWidgets.QPushButton("Suggestions ON")
         self.suggest_btn.setProperty("primary", True)
         self.suggest_btn.setCheckable(True)
@@ -71,6 +64,15 @@ class ControlPanel(QtWidgets.QWidget):
         self.suggest_btn.toggled.connect(self._on_suggest_toggle)
         top_row.addWidget(self.suggest_btn, 1)
         lay.addLayout(top_row)
+
+        btn_row = QtWidgets.QHBoxLayout()
+        new_btn = QtWidgets.QPushButton("⟳  New Game / Change Side…")
+        new_btn.clicked.connect(self.newGameRequested.emit)
+        reset_btn = QtWidgets.QPushButton("↺  Reset Board")
+        reset_btn.clicked.connect(self.resetBoardRequested.emit)
+        btn_row.addWidget(new_btn, 2)
+        btn_row.addWidget(reset_btn, 1)
+        lay.addLayout(btn_row)
 
         view_row = QtWidgets.QHBoxLayout()
         view_row.setContentsMargins(0, 4, 0, 4)

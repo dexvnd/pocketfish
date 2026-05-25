@@ -57,6 +57,8 @@ def main() -> None:
     panel.debugToggled.connect(worker.set_debug)
     panel.debugToggled.connect(overlay.set_debug)
     panel.suggestionToggled.connect(worker.set_suggestions)
+    panel.suggestionToggled.connect(
+        lambda on: overlay.clear_move() if not on else None)
     panel.engineOptsChanged.connect(worker.set_engine_opts)
 
     worker.statusChanged.connect(panel.set_status)
@@ -65,6 +67,35 @@ def main() -> None:
     worker.boardRect.connect(overlay.set_board_rect)
     worker.moveLogged.connect(panel.append_log)
     worker.suggestionText.connect(panel.set_suggestion)
+
+    def on_reset_board():
+        worker.reset_requested = True
+        worker.recalibrate_requested = True
+        panel.append_log("--- board reset ---")
+
+    panel.resetBoardRequested.connect(on_reset_board)
+
+    def on_new_game():
+        dlg = StartupDialog(panel)
+        if dlg.exec_() != QtWidgets.QDialog.Accepted or dlg.choice is None:
+            return
+
+        worker.set_engine_opts(
+            dlg.depth, dlg.movetime_ms,
+            dlg.threads, dlg.hash_mb, dlg.skill,
+        )
+        panel.apply_engine_settings(
+            depth=dlg.depth,
+            movetime_ms=dlg.movetime_ms,
+            threads=dlg.threads,
+            hash_mb=dlg.hash_mb,
+            skill=dlg.skill,
+        )
+
+        worker.confirm_color(dlg.choice)
+        panel.append_log(f"--- new game: playing as {dlg.choice} ---")
+
+    panel.newGameRequested.connect(on_new_game)
 
     def on_debug(info: dict) -> None:
         panel.lbl_monitor.setText(str(info.get("monitor") or "—"))
@@ -85,10 +116,6 @@ def main() -> None:
         panel.eval_bar.set_eval(info.get("score"))
 
     worker.debugInfo.connect(on_debug)
-
-    panel.color_combo.blockSignals(True)
-    panel.color_combo.setCurrentText(startup.choice)
-    panel.color_combo.blockSignals(False)
     worker.confirm_color(startup.choice)
 
     panel.show()

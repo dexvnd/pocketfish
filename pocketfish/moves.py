@@ -108,12 +108,16 @@ def resync_board(curr_grid: np.ndarray, flipped: bool,
     best_two = max(two_ply_valid, key=lambda x: x[0]) if two_ply_valid else (-1, None)
     best_three = max(three_ply_valid, key=lambda x: x[0]) if three_ply_valid else (-1, None)
 
-    if best_one[0] >= 60 and best_one[0] > cur_match:
+    if best_one[0] >= 56 and best_one[0] > cur_match:
         return best_one[1]
-    if best_two[0] >= 60 and best_two[0] > cur_match + 1:
+    if best_two[0] >= 56 and best_two[0] > cur_match + 1:
         return best_two[1]
-    if best_three[0] >= 60 and best_three[0] > cur_match + 2:
+    if best_three[0] >= 56 and best_three[0] > cur_match + 2:
         return best_three[1]
-    if cur_match >= 56:
+
+    if best_one[0] >= 52 and best_one[0] > cur_match + 2:
+        return best_one[1]
+
+    if cur_match >= 54:
         return current
     return None
